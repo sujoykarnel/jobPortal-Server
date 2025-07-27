@@ -31,12 +31,12 @@ async function run() {
       "Pinged your deployment. You successfully connected to MongoDB!"
     );
 
-    // jobs related apis
     const jobCollection = client.db("jobPortal").collection("jobs");
     const jobApplicationCollection = client
       .db("jobPortal")
       .collection("job_application");
 
+    // jobs related apis
     app.get("/jobs", async (req, res) => {
       const cursor = jobCollection.find();
       const result = await cursor.toArray();
@@ -50,6 +50,12 @@ async function run() {
       res.send(result);
     });
 
+    app.post("/jobs", async (req, res) => {
+      const newJob = req.body;
+      const result = await jobCollection.insertOne(newJob);
+      res.send(result);
+    });
+
     // job application apis
     app.get("/job-applications", async (req, res) => {
       const email = req.query.email;
@@ -58,7 +64,7 @@ async function run() {
 
       //@TODO: not the best awy
       for (const application of result) {
-        console.log(application.job_id);
+        // console.log(application.job_id);
         const jobQuery = { _id: new ObjectId(application.job_id) };
         const jobResult = await jobCollection.findOne(jobQuery);
         if (jobResult) {
