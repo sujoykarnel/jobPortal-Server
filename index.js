@@ -32,10 +32,13 @@ async function run() {
     );
 
     // jobs related apis
-    const jobcollection = client.db("jobPortal").collection("jobs");
+    const jobCollection = client.db("jobPortal").collection("jobs");
+    const jobApplicationCollection = client
+      .db("jobPortal")
+      .collection("job_application");
 
     app.get("/jobs", async (req, res) => {
-      const cursor = jobcollection.find();
+      const cursor = jobCollection.find();
       const result = await cursor.toArray();
       res.send(result);
     });
@@ -43,7 +46,35 @@ async function run() {
     app.get("/jobs/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
-      const result = await jobcollection.findOne(query);
+      const result = await jobCollection.findOne(query);
+      res.send(result);
+    });
+
+    // job application apis
+    app.get("/job-applications", async (req, res) => {
+      const email = req.query.email;
+      const query = { applicant_email: email };
+      const result = await jobApplicationCollection.find(query).toArray();
+
+      //@TODO: not the best awy
+      for (const application of result) {
+        console.log(application.job_id);
+        const jobQuery = { _id: new ObjectId(application.job_id) };
+        const jobResult = await jobCollection.findOne(jobQuery);
+        if (jobResult) {
+          application.title = jobResult.title;
+          application.company = jobResult.company;
+          application.company_logo = jobResult.company_logo;
+          application.location = jobResult.location;
+        }
+      }
+
+      res.send(result);
+    });
+
+    app.post("/job-applications", async (req, res) => {
+      const application = req.body;
+      const result = await jobApplicationCollection.insertOne(application);
       res.send(result);
     });
   } finally {
