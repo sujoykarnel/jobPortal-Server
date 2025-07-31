@@ -18,9 +18,21 @@ app.use(
 app.use(express.json());
 app.use(cookieParser());
 
-const verifyToken = (req, res, nex) => {
-  
-}
+const verifyToken = (req, res, next) => {
+  // console.log("verify", req.cookies);
+  const token = req?.cookies?.token;
+  if (!token) {
+    return res.status(401).send({ message: "Unathorized Access" });
+  }
+
+  jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+    if (err) {
+      return res.status(401).send({ message: "Unathorized Access" });
+    }
+    req.user = decoded;
+    next();
+  });
+};
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@atlascluster.bn4iz8z.mongodb.net/?retryWrites=true&w=majority&appName=AtlasCluster`;
 
@@ -50,7 +62,6 @@ async function run() {
 
     // Auth related apis
     app.post("/jwt", async (req, res) => {
-      console.log("hit");
       const user = req.body;
       const token = jwt.sign(user, process.env.JWT_SECRET, { expiresIn: "5h" });
       res
@@ -87,10 +98,13 @@ async function run() {
     });
 
     // job application apis
-    app.get("/job-applications", async (req, res) => {
+    app.get("/job-applications", verifyToken, async (req, res) => {
       const email = req.query.email;
       const query = { applicant_email: email };
-      console.log("cookie", req.cookies);
+
+      if (req.user.email !== req.query.email) {
+        return res.status(403).send({ message: "Forbidden Access" });
+      }
       const result = await jobApplicationCollection.find(query).toArray();
 
       //@TODO: not the best awy
