@@ -1,5 +1,7 @@
 const express = require("express");
 const cors = require("cors");
+const jwt = require("jsonwebtoken");
+const cookieParser = require("cookie-parser");
 const app = express();
 require("dotenv").config();
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
@@ -7,8 +9,18 @@ const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const port = process.env.PORT || 5000;
 
 // Midelewere
-app.use(cors());
+app.use(
+  cors({
+    origin: ["http://localhost:5173"],
+    credentials: true,
+  })
+);
 app.use(express.json());
+app.use(cookieParser());
+
+const verifyToken = (req, res, nex) => {
+  
+}
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@atlascluster.bn4iz8z.mongodb.net/?retryWrites=true&w=majority&appName=AtlasCluster`;
 
@@ -35,6 +47,19 @@ async function run() {
     const jobApplicationCollection = client
       .db("jobPortal")
       .collection("job_application");
+
+    // Auth related apis
+    app.post("/jwt", async (req, res) => {
+      console.log("hit");
+      const user = req.body;
+      const token = jwt.sign(user, process.env.JWT_SECRET, { expiresIn: "5h" });
+      res
+        .cookie("token", token, {
+          httpOnly: true,
+          secure: false, //http://localhost:5173/sighIn
+        })
+        .send({ success: true });
+    });
 
     // jobs related apis
     app.get("/jobs", async (req, res) => {
@@ -65,6 +90,7 @@ async function run() {
     app.get("/job-applications", async (req, res) => {
       const email = req.query.email;
       const query = { applicant_email: email };
+      console.log("cookie", req.cookies);
       const result = await jobApplicationCollection.find(query).toArray();
 
       //@TODO: not the best awy
@@ -135,6 +161,8 @@ async function run() {
       );
       res.send(result);
     });
+
+    // finally
   } finally {
     // Ensures that the client will close when you finish/error
     // await client.close();
