@@ -11,7 +11,11 @@ const port = process.env.PORT || 5000;
 // Midelewere
 app.use(
   cors({
-    origin: ["http://localhost:5173"],
+    origin: [
+      "http://localhost:5173",
+      "https://sk-job-portal.web.app",
+      "https://sk-job-portal.firebaseapp.com",
+    ],
     credentials: true,
   })
 );
@@ -48,12 +52,12 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
+    // await client.connect();
     // Send a ping to confirm a successful connection
-    await client.db("admin").command({ ping: 1 });
-    console.log(
-      "Pinged your deployment. You successfully connected to MongoDB!"
-    );
+    // await client.db("admin").command({ ping: 1 });
+    // console.log(
+    //   "Pinged your deployment. You successfully connected to MongoDB!"
+    // );
 
     const jobCollection = client.db("jobPortal").collection("jobs");
     const jobApplicationCollection = client
@@ -67,17 +71,19 @@ async function run() {
       res
         .cookie("token", token, {
           httpOnly: true,
-          secure: false, //http://localhost:5173/sighIn
+          secure: process.env.NODE_ENV === 'production'
         })
         .send({ success: true });
     });
 
-    app.post('/logout', (req, res) => {
-      res.clearCookie('token', {
-        httpOnly: true,
-        secure: false
-      }).send({success: true})
-    })
+    app.post("/logout", (req, res) => {
+      res
+        .clearCookie("token", {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+        })
+        .send({ success: true });
+    });
 
     // jobs related apis
     app.get("/jobs", async (req, res) => {
